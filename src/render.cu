@@ -8,8 +8,18 @@ __device__ float sdCircle(float2 point, float radius) {
     return length(point) - radius;
 }
 
+__device__ float sdBox(float2 point, float2 b) {
+    float2 d = abs(point) - b;
+    return length(max(d, 0.0)) + fminf(fmaxf(d.x, d.y), 0.0f);
+}
 
-__global__ void render_kernel(uint32_t* pixels, int width, int height) {
+
+__device__ float sdAll(float2 point, float time) {
+    float2 circle_center = make_float2(sinf(time)* 0.8f, 0.4f);
+    return smin(sdBox(point, make_float2(0.4f, 0.25f)), sdCircle(point - circle_center, 0.25f), 0.04);
+}
+
+__global__ void render_kernel(uint32_t* pixels, int width, int height, float time) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -18,7 +28,7 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height) {
         float v = (2.0f * (height - y) - height) / height;
         float2 point = make_float2(u, v);
 
-        float d = sdCircle(point, 0.5f);
+        float d = sdAll(point, time);
 
         int index = y*width + x;
         uint32_t colour = 0;
@@ -26,15 +36,13 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height) {
         uint8_t r = (uint8_t)((x / (float)width) * 255);
         uint8_t g = (uint8_t)((y / (float)height) * 255);
 
-        if (d < 0) {
+        if (d <= 0) {
             colour = (r << 24) | (g << 16) | (150 << 8) | 255;
         }
 
         pixels[index] = colour;
     }
 }
-
-
 
 // HOST FUNCTIONS
 
@@ -44,7 +52,7 @@ void init_renderer(int width, int height) {
     cudaMalloc(&d_pixels, memory_size);
 }
 
-void render_frame(uint32_t* h_pixels, int width, int height) {
+void render_frame(uint32_t* h_pixels, int width, int height, float time) {
     if (!d_pixels) {
         return;
     }
@@ -52,7 +60,7 @@ void render_frame(uint32_t* h_pixels, int width, int height) {
     dim3 dimBlock(16, 16);
     dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
 
-    render_kernel<<<dimGrid, dimBlock>>>(d_pixels, width, height);
+    render_kernel<<<dimGrid, dimBlock>>>(d_pixels, width, height, time);
 
     size_t memory_size = width * height * sizeof(uint32_t);
     cudaMemcpy(h_pixels, d_pixels, memory_size, cudaMemcpyDeviceToHost);

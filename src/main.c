@@ -59,7 +59,8 @@ int main() {
         }
 
         // rendering
-        render_frame(h_pixels, WINDOW_WIDTH, WINDOW_HEIGHT);
+        float render_time = SDL_GetTicks() / 1000.0f;
+        render_frame(h_pixels, WINDOW_WIDTH, WINDOW_HEIGHT, render_time);
 
         SDL_UpdateTexture(texture, NULL, h_pixels, WINDOW_WIDTH * sizeof(uint32_t));
         SDL_RenderClear(renderer);
