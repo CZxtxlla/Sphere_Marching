@@ -13,10 +13,16 @@ __device__ float sdBox(float2 point, float2 b) {
     return length(max(d, 0.0)) + fminf(fmaxf(d.x, d.y), 0.0f);
 }
 
-
-__device__ float sdAll(float2 point, float time) {
+// relates all the sds for the scene
+__device__ ShapeData sdAll(float2 point, float time) {
     float2 circle_center = make_float2(sinf(time)* 0.8f, 0.4f);
-    return smin(sdBox(point, make_float2(0.4f, 0.25f)), sdCircle(point - circle_center, 0.25f), 0.04);
+    float d_circle = sdCircle(point - circle_center, 0.25f);
+    float3 colour_circle = make_float3(0.9f, 0.1f, 0.2f);
+
+    float d_box = sdBox(point, make_float2(0.4f, 0.25f));
+    float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
+
+    return smin_shape(d_box, d_circle, colour_box, colour_circle, 0.04f);
 }
 
 __global__ void render_kernel(uint32_t* pixels, int width, int height, float time) {
@@ -28,16 +34,17 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
         float v = (2.0f * (height - y) - height) / height;
         float2 point = make_float2(u, v);
 
-        float d = sdAll(point, time);
+        ShapeData result = sdAll(point, time);
 
         int index = y*width + x;
         uint32_t colour = 0;
 
-        uint8_t r = (uint8_t)((x / (float)width) * 255);
-        uint8_t g = (uint8_t)((y / (float)height) * 255);
+        if (result.d <= 0.0f) {
+            uint8_t r = (uint8_t)(result.colour.x * 255.0f);
+            uint8_t g = (uint8_t)(result.colour.y * 255.0f);
+            uint8_t b = (uint8_t)(result.colour.z * 255.0f);
 
-        if (d <= 0) {
-            colour = (r << 24) | (g << 16) | (150 << 8) | 255;
+            colour = (r << 24) | (g << 16) | (b << 8) | 255;
         }
 
         pixels[index] = colour;
@@ -45,8 +52,6 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
 }
 
 // HOST FUNCTIONS
-
-
 void init_renderer(int width, int height) {
     size_t memory_size = width * height * sizeof(uint32_t);
     cudaMalloc(&d_pixels, memory_size);
