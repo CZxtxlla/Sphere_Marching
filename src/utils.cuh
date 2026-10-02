@@ -34,6 +34,10 @@ __device__ inline float2 min(float2 v, float m) {
     return make_float2(fminf(v.x, m), fminf(v.y, m));
 }
 
+__device__ inline float3 mix(float3 a, float3 b, float t) {
+    return make_float3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+}
+
 // cubic polynomial
 __device__ inline float smin(float a, float b, float k) {
     k *= 6.0f;
@@ -50,7 +54,7 @@ __device__ inline ShapeData smin_shape(float d1, float d2, float3 col1, float3 c
     float mix_d = (d1 < d2) ? d1 - s : d2 - s;
     float mix_factor = (d1 < d2) ? m : (1.0f - m);
 
-    float3 mix_colour = make_float3(col1.x + (col2.x - col1.x) * mix_factor, col1.y + (col2.y - col1.y) * mix_factor, col1.z + (col2.z - col1.z) * mix_factor);
+    float3 mix_colour = mix(col1, col2, mix_factor);
 
     ShapeData result = {mix_d, mix_colour};
     return result;

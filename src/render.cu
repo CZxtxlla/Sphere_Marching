@@ -15,11 +15,12 @@ __device__ float sdBox(float2 point, float2 b) {
 
 // relates all the sds for the scene
 __device__ ShapeData sdAll(float2 point, float time) {
-    float2 circle_center = make_float2(sinf(time)* 0.8f, 0.4f);
+    float2 circle_center = make_float2(0.0f, sinf(time)* 0.3f);
     float d_circle = sdCircle(point - circle_center, 0.25f);
     float3 colour_circle = make_float3(0.9f, 0.1f, 0.2f);
 
-    float d_box = sdBox(point, make_float2(0.4f, 0.25f));
+    float2 box_center = make_float2(0.0f, -0.6f);
+    float d_box = sdBox(point - box_center, make_float2(2.0f, 0.5f));
     float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
 
     return smin_shape(d_box, d_circle, colour_box, colour_circle, 0.04f);
