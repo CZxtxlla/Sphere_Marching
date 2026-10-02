@@ -41,6 +41,11 @@ int main() {
     bool is_running = true;
     SDL_Event event;
 
+    // info
+    uint64_t last_time = SDL_GetTicks();
+    int frame_count = 0;
+    char title_buffer[128];
+
     // main loop
     while (is_running) {
 
@@ -58,6 +63,21 @@ int main() {
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
+
+        frame_count++;
+        uint64_t current_time = SDL_GetTicks();
+        uint64_t elapsed_time = current_time - last_time;
+
+        if (elapsed_time > 1000) {
+            float fps = frame_count / (elapsed_time / 1000.0f);
+            float frame_time_ms = (float) elapsed_time / frame_count;
+
+            snprintf(title_buffer, sizeof(title_buffer), "Sphere Marcher | %.1f FPS | %.2f ms", fps, frame_time_ms); 
+            SDL_SetWindowTitle(window, title_buffer);
+
+            last_time = current_time;
+            frame_count = 0;
+        }
     }
 
     cleanup_renderer();
