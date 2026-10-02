@@ -19,7 +19,7 @@ int main() {
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
 
-    if (!SDL_CreateWindowAndRenderer("RayMarcher", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("RayMarcher", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
         fprintf(stderr, "window and renderer creation failed: %s\n", SDL_GetError());
         return -1;
     }
@@ -32,6 +32,8 @@ int main() {
         SDL_Quit();
         return -1;
     }
+
+    SDL_SetRenderLogicalPresentation(renderer, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     size_t memory_size = WINDOW_WIDTH * WINDOW_WIDTH * sizeof(uint32_t);
     uint32_t* h_pixels = (uint32_t*)malloc(memory_size);

@@ -1,21 +1,42 @@
 #include "render.h"
-#include <cuda_runtime.h>
+#include "utils.cuh"
 
 uint32_t* d_pixels = NULL;
 
+// KERNELS
+__device__ float sdCircle(float2 point, float radius) {
+    return length(point) - radius;
+}
 
-// render kernel
+
 __global__ void render_kernel(uint32_t* pixels, int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < width && y < height) {
-        int index = y * width + x;
-        uint8_t r = ((x / (float) width) * 255);
-        uint8_t g = ((y / (float) height) * 255);
-        pixels[index] = (r << 24) | (g << 16) | (150 << 8) | 255;
+        float u = (2.0f * x - width) / height;
+        float v = (2.0f * (height - y) - height) / height;
+        float2 point = make_float2(u, v);
+
+        float d = sdCircle(point, 0.5f);
+
+        int index = y*width + x;
+        uint32_t colour = 0;
+
+        uint8_t r = (uint8_t)((x / (float)width) * 255);
+        uint8_t g = (uint8_t)((y / (float)height) * 255);
+
+        if (d < 0) {
+            colour = (r << 24) | (g << 16) | (150 << 8) | 255;
+        }
+
+        pixels[index] = colour;
     }
 }
+
+
+
+// HOST FUNCTIONS
 
 
 void init_renderer(int width, int height) {
