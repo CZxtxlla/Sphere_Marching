@@ -8,7 +8,7 @@ struct ShapeData {
     float3 colour;
 };
 
-// overload operators
+// vector operations 2D
 __device__ inline float2 operator+(float2 a, float2 b) { 
     return make_float2(a.x + b.x, a.y + b.y); 
 }
@@ -34,6 +34,35 @@ __device__ inline float2 min(float2 v, float m) {
     return make_float2(fminf(v.x, m), fminf(v.y, m));
 }
 
+// vector operations 3D
+__device__ inline float3 operator+(float3 a, float3 b) { 
+    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z); 
+}
+__device__ inline float3 operator-(float3 a, float3 b) { 
+    return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); 
+}
+__device__ inline float3 operator*(float3 a, float s) {
+    return make_float3(a.x * s, a.y * s, a.z * s);
+}
+__device__ inline float dot(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+__device__ inline float length(float3 v) {
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+__device__ inline float3 abs(float3 v) {
+    return make_float3(fabsf(v.x), fabsf(v.y), fabsf(v.z));
+}
+__device__ inline float3 max(float3 v, float m) {
+    return make_float3(fmaxf(v.x, m), fmaxf(v.y, m), fmaxf(v.z, m));
+}
+__device__ inline float3 min(float3 v, float m) {
+    return make_float3(fminf(v.x, m), fminf(v.y, m), fminf(v.z, m));
+}
+
+
+
+// extra functions
 __device__ inline float3 mix(float3 a, float3 b, float t) {
     return make_float3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
 }

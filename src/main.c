@@ -24,6 +24,11 @@ int main() {
         return -1;
     }
 
+    SDL_SetRenderVSync(renderer, 0);
+
+    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_ShowWindow(window);
+
     SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WINDOW_WIDTH, WINDOW_HEIGHT);
     if (!texture) {
         fprintf(stderr, "problem creating texture: %s\n", SDL_GetError());
