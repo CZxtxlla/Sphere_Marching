@@ -59,6 +59,10 @@ __device__ inline float3 max(float3 v, float m) {
 __device__ inline float3 min(float3 v, float m) {
     return make_float3(fminf(v.x, m), fminf(v.y, m), fminf(v.z, m));
 }
+__device__ inline float3 normalize(float3 v) {
+    float l = length(v);
+    return make_float3(v.x / l, v.y / l, v.z / l);
+}
 
 
 

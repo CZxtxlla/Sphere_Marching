@@ -31,6 +31,7 @@ __device__ float sdBox(float3 point, float3 b) {
 
 
 // relates all the sds for the scene
+// 2D
 __device__ ShapeData sdAll(float2 point, float time) {
     float2 circle_center = make_float2(0.0f, sinf(time)* 0.3f);
     float d_circle = sdCircle(point - circle_center, 0.25f);
@@ -43,6 +44,7 @@ __device__ ShapeData sdAll(float2 point, float time) {
     return smin_shape(d_box, d_circle, colour_box, colour_circle, 0.04f);
 }
 
+// 3D
 __device__ ShapeData sdAll(float3 point, float time) {
     float3 sphere_center = make_float3(0.0f,  sinf(time)* 0.3f - 0.1f, -1.0f);
     float d_sphere = sdSphere(point - sphere_center, 0.25f);
@@ -75,6 +77,18 @@ __device__ ShapeData rayMarch(float3 ro, float3 rd, float time) {
     return d_s;
 }
 
+// use finite differences to compute normal
+__device__ float3 getNormal(float3 p, float time) {
+    float eps = 0.001f;
+
+    float dx = sdAll(make_float3(p.x + eps, p.y, p.z), time).d - sdAll(make_float3(p.x - eps, p.y, p.z), time).d;
+    float dy = sdAll(make_float3(p.x, p.y + eps, p.z), time).d - sdAll(make_float3(p.x, p.y - eps, p.z), time).d;
+    float dz = sdAll(make_float3(p.x, p.y, p.z + eps), time).d - sdAll(make_float3(p.x, p.y, p.z - eps), time).d;
+
+    float3 normal = make_float3(dx, dy, dz);
+    return normalize(normal);
+}
+
 
 // main rendering kernel
 __global__ void render_kernel(uint32_t* pixels, int width, int height, float time) {
@@ -96,9 +110,24 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
         uint32_t colour = 0;
 
         if (result.d < MAX_DIST) {
-            uint8_t r = (uint8_t)(result.colour.x * 255.0f);
-            uint8_t g = (uint8_t)(result.colour.y * 255.0f);
-            uint8_t b = (uint8_t)(result.colour.z * 255.0f);
+            float3 hit_point = ro + rd * result.d;
+            float3 normal = getNormal(hit_point, time);
+
+            // light
+            float3 light_dir = make_float3(1.5f, 0.8f, 0.3f); // direction
+            light_dir = normalize(light_dir);
+
+            float n_dot_l = dot(normal, light_dir);
+            float diff = fmaxf(n_dot_l, 0.0f);
+
+            float ambient_light = 0.10f;
+            float intensity = ambient_light + (diff * 0.90f);
+
+
+
+            uint8_t r = (uint8_t)(fminf(result.colour.x * intensity, 1.0f) * 255.0f);
+            uint8_t g = (uint8_t)(fminf(result.colour.y * intensity, 1.0f) * 255.0f);
+            uint8_t b = (uint8_t)(fminf(result.colour.z * intensity, 1.0f) * 255.0f);
 
             colour = (r << 24) | (g << 16) | (b << 8) | 255;
         }
