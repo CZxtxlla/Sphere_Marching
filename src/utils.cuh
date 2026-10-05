@@ -93,4 +93,8 @@ __device__ inline ShapeData smin_shape(float d1, float d2, float3 col1, float3 c
     return result;
 }
 
+__device__ inline float modulo(float x, float y) {
+    return x - (y * floorf(x / y));
+}
+
 #endif

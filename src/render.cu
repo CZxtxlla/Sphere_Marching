@@ -5,9 +5,18 @@
 #define MAX_DIST 1000.0f
 #define SURF_DIST 0.01f
 
+// output
 uint32_t* d_pixels = NULL;
 
 // KERNELS
+
+// helper for repeated domain
+__device__ float3 repeatXZ(float3 p, float2 s) {
+    float3 q = p;
+    q.x = modulo(p.x + 0.5f * s.x, s.x) - 0.5f * s.x;
+    q.z = modulo(p.z + 0.5f * s.y, s.y) - 0.5f * s.y;
+    return q;
+}
 
 // 2D Shapes
 __device__ float sdCircle(float2 point, float radius) {
@@ -46,12 +55,15 @@ __device__ ShapeData sdAll(float2 point, float time) {
 
 // 3D
 __device__ ShapeData sdAll(float3 point, float time) {
-    float3 sphere_center = make_float3(0.0f,  sinf(time)* 0.3f - 0.1f, -1.0f);
-    float d_sphere = sdSphere(point - sphere_center, 0.25f);
+    float2 spacing = make_float2(2.0f, 2.0f);
+    float3 p_repeat = repeatXZ(point, spacing);
+
+    float3 sphere_center = make_float3(0.0f,  sinf(time)* 0.3f - 0.1f, 0.0f);
+    float d_sphere = sdSphere(p_repeat - sphere_center, 0.25f);
     float3 colour_sphere = make_float3(0.9f, 0.1f, 0.2f);
 
-    float3 box_center = make_float3(0.0f, -0.5f, -1.0f);
-    float d_box = sdBox(point - box_center, make_float3(0.5f, 0.2f, 0.5));
+    float3 box_center = make_float3(0.0f, -0.5f, 0.0f);
+    float d_box = sdBox(p_repeat - box_center, make_float3(0.5f, 0.2f, 0.5));
     float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
 
     return smin_shape(d_box, d_sphere, colour_box, colour_sphere, 0.04f);
@@ -91,7 +103,7 @@ __device__ float3 getNormal(float3 p, float time) {
 
 
 // main rendering kernel
-__global__ void render_kernel(uint32_t* pixels, int width, int height, float time) {
+__global__ void render_kernel(uint32_t* pixels, int width, int height, float time, float cx, float cy, float cz) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -99,10 +111,10 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
         float u = (2.0f * x - width) / height;
         float v = (2.0f * (height - y) - height) / height;
         
-        float3 ro = make_float3(0.0f, 0.0f, 0.0f); // camera position (ray origin)
+        float3 ro = make_float3(cx, cy, cz); // camera position (ray origin)
 
         float3 rd = make_float3(u, v, -1.0f); // initial direction of ray
-        rd = rd * (1 / length(rd)); // normalize
+        rd = normalize(rd);
 
         ShapeData result = rayMarch(ro, rd, time);
 
@@ -142,7 +154,7 @@ void init_renderer(int width, int height) {
     cudaMalloc(&d_pixels, memory_size);
 }
 
-void render_frame(uint32_t* h_pixels, int width, int height, float time) {
+void render_frame(uint32_t* h_pixels, int width, int height, float time, float cx, float cy, float cz) {
     if (!d_pixels) {
         return;
     }
@@ -150,7 +162,7 @@ void render_frame(uint32_t* h_pixels, int width, int height, float time) {
     dim3 dimBlock(16, 16);
     dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
 
-    render_kernel<<<dimGrid, dimBlock>>>(d_pixels, width, height, time);
+    render_kernel<<<dimGrid, dimBlock>>>(d_pixels, width, height, time, cx, cy, cz);
 
     size_t memory_size = width * height * sizeof(uint32_t);
     cudaMemcpy(h_pixels, d_pixels, memory_size, cudaMemcpyDeviceToHost);
