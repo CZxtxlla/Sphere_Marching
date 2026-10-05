@@ -1,7 +1,7 @@
 #include "render.h"
 #include "utils.cuh"
 
-#define MAX_STEPS 100
+#define MAX_STEPS 300
 #define MAX_DIST 1000.0f
 #define SURF_DIST 0.01f
 
@@ -58,12 +58,21 @@ __device__ ShapeData sdAll(float3 point, float time) {
     float2 spacing = make_float2(2.0f, 2.0f);
     float3 p_repeat = repeatXZ(point, spacing);
 
+    // Sphere
     float3 sphere_center = make_float3(0.0f,  sinf(time)* 0.3f - 0.1f, 0.0f);
     float d_sphere = sdSphere(p_repeat - sphere_center, 0.25f);
     float3 colour_sphere = make_float3(0.9f, 0.1f, 0.2f);
 
+    // Box
     float3 box_center = make_float3(0.0f, -0.5f, 0.0f);
-    float d_box = sdBox(p_repeat - box_center, make_float3(0.5f, 0.2f, 0.5));
+    float3 p_box = p_repeat - box_center;
+
+    // inverse rotation
+    float2 rotated_xz = rot2D(make_float2(p_box.x, p_box.z), -time);
+    p_box.x = rotated_xz.x;
+    p_box.z = rotated_xz.y;
+
+    float d_box = sdBox(p_box, make_float3(0.5f, 0.2f, 0.5));
     float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
 
     return smin_shape(d_box, d_sphere, colour_box, colour_sphere, 0.04f);
@@ -79,11 +88,14 @@ __device__ ShapeData rayMarch(float3 ro, float3 rd, float time) {
     for (int i = 0; i < MAX_STEPS; i++) {
         float3 p = ro + rd * d_0;
         d_s = sdAll(p, time);
-        d_0 += d_s.d;
+        d_0 += d_s.d * 0.75f;
 
         if (d_0 >= MAX_DIST || d_s.d < SURF_DIST) {
             break;
         }
+    }
+    if (d_s.d >= SURF_DIST) {
+        d_0 = MAX_DIST;
     }
     d_s.d = d_0;
     return d_s;
@@ -91,7 +103,7 @@ __device__ ShapeData rayMarch(float3 ro, float3 rd, float time) {
 
 // use finite differences to compute normal
 __device__ float3 getNormal(float3 p, float time) {
-    float eps = 0.001f;
+    float eps = 0.0001f;
 
     float dx = sdAll(make_float3(p.x + eps, p.y, p.z), time).d - sdAll(make_float3(p.x - eps, p.y, p.z), time).d;
     float dy = sdAll(make_float3(p.x, p.y + eps, p.z), time).d - sdAll(make_float3(p.x, p.y - eps, p.z), time).d;

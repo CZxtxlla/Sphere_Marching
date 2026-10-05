@@ -97,4 +97,10 @@ __device__ inline float modulo(float x, float y) {
     return x - (y * floorf(x / y));
 }
 
+__device__ inline float2 rot2D(float2 p, float a) {
+    float s = sinf(a);
+    float c = cosf(a);
+    return make_float2(p.x * c - p.y * s, p.x * s + p.y * c);
+}
+
 #endif
