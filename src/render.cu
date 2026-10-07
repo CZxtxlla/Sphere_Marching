@@ -18,17 +18,6 @@ __device__ float3 repeatXZ(float3 p, float2 s) {
     return q;
 }
 
-// 2D Shapes
-__device__ float sdCircle(float2 point, float radius) {
-    return length(point) - radius;
-}
-
-__device__ float sdBox(float2 point, float2 b) {
-    float2 d = abs(point) - b;
-    return length(max(d, 0.0f)) + fminf(fmaxf(d.x, d.y), 0.0f);
-}
-
-// 3D shapes
 __device__ float sdSphere(float3 point, float radius) {
     return length(point) - radius;
 }
@@ -40,22 +29,8 @@ __device__ float sdBox(float3 point, float3 b) {
 
 
 // relates all the sds for the scene
-// 2D
-__device__ ShapeData sdAll(float2 point, float time) {
-    float2 circle_center = make_float2(0.0f, sinf(time)* 0.3f);
-    float d_circle = sdCircle(point - circle_center, 0.25f);
-    float3 colour_circle = make_float3(0.9f, 0.1f, 0.2f);
-
-    float2 box_center = make_float2(0.0f, -0.6f);
-    float d_box = sdBox(point - box_center, make_float2(2.0f, 0.5f));
-    float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
-
-    return smin_shape(d_box, d_circle, colour_box, colour_circle, 0.04f);
-}
-
-// 3D
 __device__ ShapeData sdAll(float3 point, float time) {
-    float2 spacing = make_float2(2.0f, 2.0f);
+    float2 spacing = make_float2(2.5f, 2.5f);
     float3 p_repeat = repeatXZ(point, spacing);
 
     // Sphere
@@ -183,6 +158,6 @@ void render_frame(uint32_t* h_pixels, int width, int height, float time, float c
 void cleanup_renderer() {
     if (d_pixels) {
         cudaFree(d_pixels);
-        d_pixels = NULL;
+        d_pixels = NULL;// 3D shapes
     }
 }
