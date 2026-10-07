@@ -24,8 +24,7 @@ __device__ float sdBox(float3 point, float3 b) {
 ```
 
 
-One interesting thing is that we can draw to screen anything that has these rules. For example, we could draw a 
-polynomial, and it would look like a wavy floor, etc... There are so many different unique SDFs and Inigo Quilez does a great job showcasing a lot of them in his painting with math series.
+One interesting thing is that we can draw to screen anything that has these rules. There are so many different unique SDFs and Inigo Quilez does a great job showcasing a lot of them in his painting with math series.
 
 ### Smoothmin
 

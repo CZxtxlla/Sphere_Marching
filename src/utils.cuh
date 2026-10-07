@@ -78,19 +78,27 @@ __device__ inline float smin(float a, float b, float k) {
     return fminf(a, b) - h*h*h*k*(1.0f / 6.0f);
 }
 
-__device__ inline ShapeData smin_shape(float d1, float d2, float3 col1, float3 col2, float k) {
-    float h = 1.0f - fminf(fabsf(d1 - d2) / (6.0f * k), 1.0);
+__device__ inline ShapeData smin_shape(ShapeData a, ShapeData b, float k) {
+    float h = 1.0f - fminf(fabsf(a.d - b.d) / (6.0f * k), 1.0);
     float w = h*h*h;
     float m = w*0.5f;
     float s = w*k;
 
-    float mix_d = (d1 < d2) ? d1 - s : d2 - s;
-    float mix_factor = (d1 < d2) ? m : (1.0f - m);
+    float mix_d = (a.d < b.d) ? a.d - s : b.d - s;
+    float mix_factor = (a.d < b.d) ? m : (1.0f - m);
 
-    float3 mix_colour = mix(col1, col2, mix_factor);
+    float3 mix_colour = mix(a.colour, b.colour, mix_factor);
 
     ShapeData result = {mix_d, mix_colour};
     return result;
+}
+
+__device__ inline ShapeData min_shape(ShapeData a, ShapeData b) {
+    if (a.d < b.d) {
+        return a;
+    } else {
+        return b;
+    }
 }
 
 __device__ inline float modulo(float x, float y) {

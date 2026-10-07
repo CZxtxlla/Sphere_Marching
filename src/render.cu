@@ -27,6 +27,13 @@ __device__ float sdBox(float3 point, float3 b) {
     return length(max(d, 0.0f)) + fminf(fmaxf(d.x, fmaxf(d.y, d.z)), 0.0f);
 }
 
+__device__ float sdFloor(float3 point) {
+    float floor_height = -0.5f * sinf(point.x) * sinf(point.z) - 2.0f;
+    float d = point.y - floor_height;
+
+    return d * 0.7f;
+}
+
 
 // relates all the sds for the scene
 __device__ ShapeData sdAll(float3 point, float time) {
@@ -37,6 +44,7 @@ __device__ ShapeData sdAll(float3 point, float time) {
     float3 sphere_center = make_float3(0.0f,  sinf(time)* 0.3f - 0.1f, 0.0f);
     float d_sphere = sdSphere(p_repeat - sphere_center, 0.25f);
     float3 colour_sphere = make_float3(0.9f, 0.1f, 0.2f);
+    ShapeData sphere = {d_sphere, colour_sphere};
 
     // Box
     float3 box_center = make_float3(0.0f, -0.5f, 0.0f);
@@ -49,8 +57,12 @@ __device__ ShapeData sdAll(float3 point, float time) {
 
     float d_box = sdBox(p_box, make_float3(0.5f, 0.2f, 0.5));
     float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
+    ShapeData box = {d_box, colour_box};
 
-    return smin_shape(d_box, d_sphere, colour_box, colour_sphere, 0.04f);
+    ShapeData box_sphere = smin_shape(box, sphere, 0.04f);
+    ShapeData floor = {sdFloor(point), make_float3(0.5f, 0.5f, 0.5f)};
+
+    return min_shape(box_sphere, floor);
 }
 
 
