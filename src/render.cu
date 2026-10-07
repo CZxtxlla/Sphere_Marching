@@ -100,6 +100,21 @@ __device__ float3 getNormal(float3 p, float time) {
     return normalize(normal);
 }
 
+__device__ float soft_shadow(float3 ro, float3 rd, float mint, float maxt, float time, float k) {
+    // raymarch to sun
+    float res = 1.0f;
+    float t = mint;
+    for (int i = 0; i < 256 && t < maxt; i++) {
+        float h = sdAll(ro + rd * t, time).d;
+        if (h < 0.001) {
+            return 0.0;
+        }
+        res = fminf(res, k * h / t);
+        t += h * 0.75f;
+    }
+    return fmaxf(res, 0.0f);
+}
+
 
 // main rendering kernel
 __global__ void render_kernel(uint32_t* pixels, int width, int height, float time, float cx, float cy, float cz) {
@@ -131,17 +146,26 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
             float n_dot_l = dot(normal, light_dir);
             float diff = fmaxf(n_dot_l, 0.0f);
 
+            float3 shadow_ro = hit_point + normal * 0.02f;
+
+            float s = soft_shadow(shadow_ro, light_dir, 0.0f, 20.0f, time, 20.0f);
+            
             float ambient_light = 0.10f;
-            float intensity = ambient_light + (diff * 0.90f);
-
-
+            float intensity = ambient_light + (diff * s * 0.90f);
 
             uint8_t r = (uint8_t)(fminf(result.colour.x * intensity, 1.0f) * 255.0f);
             uint8_t g = (uint8_t)(fminf(result.colour.y * intensity, 1.0f) * 255.0f);
             uint8_t b = (uint8_t)(fminf(result.colour.z * intensity, 1.0f) * 255.0f);
 
             colour = (r << 24) | (g << 16) | (b << 8) | 255;
+        } /* else {
+            uint8_t r = (uint8_t)(135.0f);
+            uint8_t g = (uint8_t)(206.0f);
+            uint8_t b = (uint8_t)(235.0f);
+
+            colour = (r << 24) | (g << 16) | (b << 8) | 255;
         }
+        */
 
         pixels[index] = colour;
     }
