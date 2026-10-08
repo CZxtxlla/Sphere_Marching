@@ -38,6 +38,8 @@ But how do we know how much the ray can step at any given moment without acciden
 ### Repeated Domain
 
 
+### Shadows / Soft Shadows
+
 
 
 

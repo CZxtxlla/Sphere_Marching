@@ -58,6 +58,9 @@ int main() {
     float cam_y = 0.0f;
     float cam_z = 0.0f;
 
+    float pitch = 0.0f; // up down
+    float yaw = 0.0f; // left right
+
     // main loop
     while (is_running) {
         uint64_t current_time = SDL_GetTicks();
@@ -88,6 +91,7 @@ int main() {
         const bool* keys = SDL_GetKeyboardState(NULL);
 
         float move_speed = 3.0f * delta_time;
+        float turn_speed = 2.0f * delta_time;
         if (keys[SDL_SCANCODE_W]) cam_z -= move_speed;
         if (keys[SDL_SCANCODE_S]) cam_z += move_speed;
         if (keys[SDL_SCANCODE_A]) cam_x -= move_speed;
@@ -95,9 +99,17 @@ int main() {
         if (keys[SDL_SCANCODE_SPACE]) cam_y += move_speed;
         if (keys[SDL_SCANCODE_LSHIFT]) cam_y -= move_speed;
 
+        if (keys[SDL_SCANCODE_UP]) pitch += turn_speed;
+        if (keys[SDL_SCANCODE_DOWN]) pitch -= turn_speed;
+        if (keys[SDL_SCANCODE_LEFT]) yaw -= turn_speed;
+        if (keys[SDL_SCANCODE_RIGHT]) yaw += turn_speed;
+
+        if (pitch > 1.55f) pitch = 1.55f;
+        if (pitch < -1.55f) pitch = -1.55f;
+
         // rendering
         float render_time = current_time / 1000.0f;
-        render_frame(h_pixels, WINDOW_WIDTH, WINDOW_HEIGHT, render_time, cam_x, cam_y, cam_z);
+        render_frame(h_pixels, WINDOW_WIDTH, WINDOW_HEIGHT, render_time, cam_x, cam_y, cam_z, pitch, yaw);
 
         SDL_UpdateTexture(texture, NULL, h_pixels, WINDOW_WIDTH * sizeof(uint32_t));
         SDL_RenderClear(renderer);

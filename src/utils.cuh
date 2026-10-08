@@ -93,12 +93,47 @@ __device__ inline ShapeData smin_shape(ShapeData a, ShapeData b, float k) {
     return result;
 }
 
+__device__ inline ShapeData smax_shape(ShapeData a, ShapeData b, float k) {
+    float h = 1.0f - fminf(fabsf(a.d - b.d) / (6.0f * k), 1.0);
+    float w = h*h*h;
+    float m = w*0.5f;
+    float s = w*k;
+
+    float mix_d = (a.d < b.d) ? b.d - s : a.d - s;
+    float mix_factor = (b.d < a.d) ? m : (1.0f - m);
+
+    float3 mix_colour = mix(a.colour, b.colour, mix_factor);
+
+    ShapeData result = {mix_d, mix_colour};
+    return result;
+}
+
 __device__ inline ShapeData min_shape(ShapeData a, ShapeData b) {
     if (a.d < b.d) {
         return a;
     } else {
         return b;
     }
+}
+
+__device__ inline ShapeData max_shape(ShapeData a, ShapeData b) {
+    if (a.d > b.d) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+__device__ inline ShapeData subtract_shape(ShapeData base, ShapeData sub, float k) {
+    float a = base.d;
+    float b = -sub.d;
+
+    k *= 6.0f;
+    float h = fmaxf(k - abs(a - b), 0.0f) / k;
+    float result_d = fmaxf(a, b) + h*h*h*k*(1.0f / 6.0f);
+
+    ShapeData result = {result_d, base.colour};
+    return result;
 }
 
 __device__ inline float modulo(float x, float y) {

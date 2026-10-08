@@ -28,7 +28,7 @@ __device__ float sdBox(float3 point, float3 b) {
 }
 
 __device__ float sdFloor(float3 point) {
-    float floor_height = -0.5f * sinf(point.x) * sinf(point.z) - 2.0f;
+    float floor_height = -0.4f;
     float d = point.y - floor_height;
 
     return d * 0.7f;
@@ -37,29 +37,29 @@ __device__ float sdFloor(float3 point) {
 
 // relates all the sds for the scene
 __device__ ShapeData sdAll(float3 point, float time) {
-    float2 spacing = make_float2(2.5f, 2.5f);
-    float3 p_repeat = repeatXZ(point, spacing);
+    //float2 spacing = make_float2(2.5f, 2.5f);
+    //float3 p_repeat = repeatXZ(point, spacing);
 
     // Sphere
-    float3 sphere_center = make_float3(0.0f,  sinf(time)* 0.3f - 0.1f, 0.0f);
-    float d_sphere = sdSphere(p_repeat - sphere_center, 0.25f);
+    float3 sphere_center = make_float3(0.0f, -0.1f, -2.0f);
+    float d_sphere = sdSphere(point - sphere_center, 0.50f);
     float3 colour_sphere = make_float3(0.9f, 0.1f, 0.2f);
     ShapeData sphere = {d_sphere, colour_sphere};
 
     // Box
-    float3 box_center = make_float3(0.0f, -0.5f, 0.0f);
-    float3 p_box = p_repeat - box_center;
+    float3 box_center = make_float3(0.0f, 0.0f, -2.0f);
+    float3 p_box = point - box_center;
 
-    // inverse rotation
-    float2 rotated_xz = rot2D(make_float2(p_box.x, p_box.z), -time);
+    // rotation
+    float2 rotated_xz = rot2D(make_float2(p_box.x, p_box.z), -40.0f);
     p_box.x = rotated_xz.x;
     p_box.z = rotated_xz.y;
 
-    float d_box = sdBox(p_box, make_float3(0.5f, 0.2f, 0.5));
-    float3 colour_box = make_float3(0.1f, 0.4f, 0.9f);
+    float d_box = sdBox(p_box, make_float3(1.0f, 0.5f, 0.20f));
+    float3 colour_box = make_float3(1.0f, 1.0f, 1.0f);
     ShapeData box = {d_box, colour_box};
 
-    ShapeData box_sphere = smin_shape(box, sphere, 0.04f);
+    ShapeData box_sphere = subtract_shape(box, sphere, 0.02);
     ShapeData floor = {sdFloor(point), make_float3(0.5f, 0.5f, 0.5f)};
 
     return min_shape(box_sphere, floor);
@@ -117,7 +117,7 @@ __device__ float soft_shadow(float3 ro, float3 rd, float mint, float maxt, float
 
 
 // main rendering kernel
-__global__ void render_kernel(uint32_t* pixels, int width, int height, float time, float cx, float cy, float cz) {
+__global__ void render_kernel(uint32_t* pixels, int width, int height, float time, float cx, float cy, float cz, float pitch, float yaw) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -129,6 +129,14 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
 
         float3 rd = make_float3(u, v, -1.0f); // initial direction of ray
         rd = normalize(rd);
+
+        float2 yz = rot2D(make_float2(rd.y, rd.z), pitch);
+        rd.y = yz.x;
+        rd.z = yz.y;
+
+        float2 xz = rot2D(make_float2(rd.x, rd.z), yaw);
+        rd.x = xz.x;
+        rd.z = xz.y;
 
         ShapeData result = rayMarch(ro, rd, time);
 
@@ -148,7 +156,7 @@ __global__ void render_kernel(uint32_t* pixels, int width, int height, float tim
 
             float3 shadow_ro = hit_point + normal * 0.02f;
 
-            float s = soft_shadow(shadow_ro, light_dir, 0.0f, 20.0f, time, 20.0f);
+            float s = soft_shadow(shadow_ro, light_dir, 0.0f, 20.0f, time, 8.0f);
             
             float ambient_light = 0.10f;
             float intensity = ambient_light + (diff * s * 0.90f);
@@ -177,7 +185,7 @@ void init_renderer(int width, int height) {
     cudaMalloc(&d_pixels, memory_size);
 }
 
-void render_frame(uint32_t* h_pixels, int width, int height, float time, float cx, float cy, float cz) {
+void render_frame(uint32_t* h_pixels, int width, int height, float time, float cx, float cy, float cz, float pitch, float yaw) {
     if (!d_pixels) {
         return;
     }
@@ -185,7 +193,7 @@ void render_frame(uint32_t* h_pixels, int width, int height, float time, float c
     dim3 dimBlock(16, 16);
     dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
 
-    render_kernel<<<dimGrid, dimBlock>>>(d_pixels, width, height, time, cx, cy, cz);
+    render_kernel<<<dimGrid, dimBlock>>>(d_pixels, width, height, time, cx, cy, cz, pitch, yaw);
 
     size_t memory_size = width * height * sizeof(uint32_t);
     cudaMemcpy(h_pixels, d_pixels, memory_size, cudaMemcpyDeviceToHost);
